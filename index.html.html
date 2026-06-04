@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Threat Intelligence Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg-void: #030508;
+    --bg-deep: #060c12;
+    --bg-panel: #0a1520;
+    --bg-card: #0d1d2e;
+    --bg-hover: #112436;
+    --border: #1a3a55;
+    --border-bright: #1e5080;
+    --accent-cyan: #00d4ff;
+    --accent-cyan-dim: rgba(0, 212, 255, 0.15);
+    --accent-cyan-glow: rgba(0, 212, 255, 0.4);
+    --green: #00ff88;
+    --green-dim: rgba(0, 255, 136, 0.15);
+    --yellow: #ffcc00;
+    --yellow-dim: rgba(255, 204, 0, 0.15);
+    --orange: #ff8800;
+    --orange-dim: rgba(255, 136, 0, 0.15);
+    --red: #ff2244;
+    --red-dim: rgba(255, 34, 68, 0.15);
+    --text-primary: #c8e8ff;
+    --text-secondary: #5a8aaa;
+    --text-muted: #2a5a7a;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Rajdhani', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 14px; }
+
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,80,140,0.15) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,60,100,0.04) 40px, rgba(0,60,100,0.04) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,60,100,0.04) 40px, rgba(0,60,100,0.04) 41px);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 30px rgba(0,0,0,0.5);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    position: relative;
+  }
+
+  .logo-icon svg { width: 100%; height: 100%; }
+
+  .logo-text {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent-cyan);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px var(--accent-cyan-glow);
+  }
+
+  .logo-sub {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3em;
+    font-family: var(--mono);
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    letter-spacing: 0.2em;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+  }
+
+  .threat-level-badge {
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    border: 1px solid;
+    text-transform: uppercase;
+  }
+
+  .tl-elevated {
+    color: var(--orange);
+    border-color: var(--orange);
+    background: var(--orange-dim);
+    box-shadow: 0 0 12px rgba(255,136,0,0.2);
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    gap: 1px;
+    min-height: calc(100vh - 56px);
+    background: var(--border);
+  }
+
+  .main-col { background: var(--bg-void); display: flex; flex-direction: column; gap: 1px; }
+  .side-col { background: var(--bg-void); display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+
+  /* PANELS */
+  .panel {
+    background: var(--bg-panel);
+    padding: 16px 20px;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    color: var(--accent-cyan);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+    display: block;
+  }
+
+  .panel-action {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .panel-action:hover {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+  }
+
+  /* STAT CARDS */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .stat-card:hover { background: var(--bg-hover); }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.c-green::after { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .stat-card.c-yellow::after { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .stat-card.c-orange::after { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+  .stat-card.c-red::after { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+    transition: all 0.3s;
+  }
+
+  .stat-card.c-green .stat-value { color: var(--green); text-shadow: 0 0 15px rgba(0,255,136,0.5); }
+  .stat-card.c-yellow .stat-value { color: var(--yellow); text-shadow: 0 0 15px rgba(255,204,0,0.5); }
+  .stat-card.c-orange .stat-value { color: var(--orange); text-shadow: 0 0 15px rgba(255,136,0,0.5); }
+  .stat-card.c-red .stat-value { color: var(--red); text-shadow: 0 0 15px rgba(255,34,68,0.5); }
+
+  .stat-delta {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+
+  .stat-delta.up { color: var(--red); }
+  .stat-delta.down { color: var(--green); }
+
+  /* WORLD MAP */
+  .map-panel {
+    flex: 1;
+    min-height: 300px;
+    position: relative;
+  }
+
+  .map-container {
+    width: 100%;
+    height: 320px;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #0a1e35 0%, #030c18 100%);
+    border: 1px solid var(--border);
+    border-radius: 0;
+  }
+
+  .map-container canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .map-corner {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: var(--accent-cyan);
+    border-style: solid;
+    opacity: 0.6;
+  }
+
+  .map-corner.tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+  .map-corner.tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+  .map-corner.bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+  .map-corner.br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+  /* CHARTS ROW */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .chart-panel {
+    background: var(--bg-panel);
+    padding: 16px 20px;
+  }
+
+  canvas.chart { width: 100%; display: block; }
+
+  /* SEARCH & FILTER */
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .search-input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 7px 12px;
+    outline: none;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 2px var(--accent-cyan-dim);
+  }
+
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .filter-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 7px 12px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    border-radius: 2px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    background: var(--accent-cyan-dim);
+  }
+
+  /* THREAT FEED */
+  .threat-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .threat-item {
+    background: var(--bg-card);
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    transition: background 0.15s;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    animation: slide-in 0.3s ease-out;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .threat-item:hover { background: var(--bg-hover); }
+
+  .threat-item.risk-low { border-left-color: var(--green); }
+  .threat-item.risk-medium { border-left-color: var(--yellow); }
+  .threat-item.risk-high { border-left-color: var(--orange); }
+  .threat-item.risk-critical { border-left-color: var(--red); }
+  .threat-item.risk-critical { background: rgba(255,34,68,0.04); }
+
+  .threat-badge {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 1px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .risk-low .threat-badge { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .risk-medium .threat-badge { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(255,204,0,0.3); }
+  .risk-high .threat-badge { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,136,0,0.3); }
+  .risk-critical .threat-badge { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,34,68,0.3); animation: critical-pulse 2s ease-in-out infinite; }
+
+  @keyframes critical-pulse {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 8px rgba(255,34,68,0.5); }
+  }
+
+  .threat-info { min-width: 0; }
+
+  .threat-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+    letter-spacing: 0.03em;
+  }
+
+  .threat-meta {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .threat-time {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* SIDE PANEL */
+  .geo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .geo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+
+  .geo-item:hover { background: var(--bg-hover); }
+
+  .geo-flag {
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+  }
+
+  .geo-name {
+    flex: 1;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .geo-bar-wrap {
+    width: 60px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .geo-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--red));
+    transition: width 1s ease;
+  }
+
+  .geo-count {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* ATTACK TYPES */
+  .attack-types {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .attack-type-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .attack-type-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    width: 90px;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .attack-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .attack-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .attack-count {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    min-width: 30px;
+    text-align: right;
+  }
+
+  /* MINI SPARKLINE */
+  .sparkline-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 30px;
+    margin-top: 6px;
+  }
+
+  .spark-bar {
+    flex: 1;
+    border-radius: 1px;
+    background: var(--accent-cyan);
+    opacity: 0.6;
+    transition: height 0.5s ease, opacity 0.2s;
+  }
+
+  .spark-bar:hover { opacity: 1; }
+
+  /* ALERT MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 0 40px rgba(0,212,255,0.15), 0 20px 60px rgba(0,0,0,0.8);
+    animation: modal-in 0.2s ease-out;
+  }
+
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-title {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    letter-spacing: 0.2em;
+  }
+
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+  .modal-body { padding: 18px; }
+
+  .modal-field {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .modal-key {
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+
+  .modal-val { color: var(--text-primary); }
+
+  /* FOOTER */
+  footer {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { display: flex; align-items: center; gap: 8px; }
+
+  .status-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* SCAN LINE EFFECT */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    .side-col { display: grid; grid-template-columns: 1fr 1fr; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .charts-row { grid-template-columns: 1fr; }
+    .side-col { display: flex; flex-direction: column; }
+    .logo-sub { display: none; }
+    .header-right .live-badge { display: none; }
+  }
+
+  /* GLITCH EFFECT */
+  @keyframes glitch {
+    0%, 98% { clip-path: none; transform: none; }
+    99% { clip-path: inset(40% 0 50% 0); transform: translateX(-2px); }
+    99.5% { clip-path: inset(20% 0 70% 0); transform: translateX(2px); }
+    100% { clip-path: none; transform: none; }
+  }
+
+  .glitch { animation: glitch 8s infinite; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.8"/>
+        <polygon points="16,6 26,12 26,20 16,26 6,20 6,12" fill="none" stroke="#00d4ff" stroke-width="0.8" opacity="0.4"/>
+        <circle cx="16" cy="16" r="4" fill="#00d4ff" opacity="0.9"/>
+        <line x1="16" y1="2" x2="16" y2="10" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+        <line x1="16" y1="22" x2="16" y2="30" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+        <line x1="2" y1="10" x2="8" y2="13" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+        <line x1="30" y1="10" x2="24" y2="13" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text glitch">CTI DASHBOARD</div>
+      <div class="logo-sub">Threat Intelligence Platform v2.4.1</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div> LIVE FEED</div>
+    <div class="clock" id="clock">--:--:-- UTC</div>
+    <div class="threat-level-badge tl-elevated" id="global-threat-level">⚠ ELEVATED</div>
+  </div>
+</header>
+
+<!-- STAT CARDS -->
+<div class="stat-row">
+  <div class="stat-card c-green">
+    <div class="stat-label">LOW RISK</div>
+    <div class="stat-value" id="stat-low">0</div>
+    <div class="stat-delta" id="delta-low">— events today</div>
+    <div class="sparkline-wrap" id="spark-low"></div>
+  </div>
+  <div class="stat-card c-yellow">
+    <div class="stat-label">MEDIUM RISK</div>
+    <div class="stat-value" id="stat-med">0</div>
+    <div class="stat-delta" id="delta-med">— events today</div>
+    <div class="sparkline-wrap" id="spark-med"></div>
+  </div>
+  <div class="stat-card c-orange">
+    <div class="stat-label">HIGH RISK</div>
+    <div class="stat-value" id="stat-high">0</div>
+    <div class="stat-delta" id="delta-high">— events today</div>
+    <div class="sparkline-wrap" id="spark-high"></div>
+  </div>
+  <div class="stat-card c-red">
+    <div class="stat-label">CRITICAL</div>
+    <div class="stat-value" id="stat-crit">0</div>
+    <div class="stat-delta" id="delta-crit">— events today</div>
+    <div class="sparkline-wrap" id="spark-crit"></div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+  <div class="main-col">
+
+    <!-- WORLD MAP -->
+    <div class="panel map-panel">
+      <div class="panel-header">
+        <div class="panel-title">GLOBAL THREAT MAP</div>
+        <div class="panel-action" onclick="clearMapDots()">CLEAR</div>
+      </div>
+      <div class="map-container">
+        <canvas id="mapCanvas"></canvas>
+        <div class="map-overlay">
+          <div class="map-corner tl"></div>
+          <div class="map-corner tr"></div>
+          <div class="map-corner bl"></div>
+          <div class="map-corner br"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-row">
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">ATTACK TIMELINE (24h)</div>
+        </div>
+        <canvas class="chart" id="timelineChart" height="130"></canvas>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">ATTACK VECTORS</div>
+        </div>
+        <canvas class="chart" id="vectorChart" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- THREAT FEED -->
+    <div class="panel" style="flex:1">
+      <div class="panel-header">
+        <div class="panel-title">LIVE THREAT FEED</div>
+        <div class="panel-action" onclick="clearFeed()">CLEAR FEED</div>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="searchInput" type="text" placeholder="Search threats, IPs, CVEs..." oninput="filterFeed()">
+        <button class="filter-btn active" onclick="setFilter('all', this)">ALL</button>
+        <button class="filter-btn" onclick="setFilter('critical', this)">CRITICAL</button>
+        <button class="filter-btn" onclick="setFilter('high', this)">HIGH</button>
+        <button class="filter-btn" onclick="setFilter('medium', this)">MED</button>
+        <button class="filter-btn" onclick="setFilter('low', this)">LOW</button>
+      </div>
+      <div class="threat-feed" id="threatFeed"></div>
+    </div>
+
+  </div>
+
+  <!-- SIDE COL -->
+  <div class="side-col">
+
+    <!-- GEO ORIGINS -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">TOP ORIGINS</div>
+      </div>
+      <div class="geo-list" id="geoList"></div>
+    </div>
+
+    <!-- ATTACK TYPES -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">ATTACK TYPES</div>
+      </div>
+      <div class="attack-types" id="attackTypes"></div>
+    </div>
+
+    <!-- RADAR CHART -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">THREAT RADAR</div>
+      </div>
+      <canvas id="radarChart" width="300" height="200"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span><div class="status-dot"></div> ALL SYSTEMS OPERATIONAL</span>
+  <span>DATA RETENTION: 72H &nbsp;|&nbsp; FEEDS: 14 ACTIVE &nbsp;|&nbsp; SENSORS: 847</span>
+  <span>CTI PLATFORM © 2024</span>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title">THREAT DETAIL</div>
+      <button class="modal-close" onclick="closeModalDirect()">✕ CLOSE</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const ATTACK_TYPES_LIST = [
+  'SQL Injection','XSS','DDoS','Ransomware','Phishing','Brute Force',
+  'Zero-Day','MITM','Botnet C2','Supply Chain','Credential Stuffing',
+  'DNS Poisoning','Port Scan','Malware Drop','Lateral Movement'
+];
+
+const GEO_DATA = [
+  { flag:'🇨🇳', name:'China', code:'CN' },
+  { flag:'🇷🇺', name:'Russia', code:'RU' },
+  { flag:'🇺🇸', name:'United States', code:'US' },
+  { flag:'🇰🇵', name:'North Korea', code:'KP' },
+  { flag:'🇮🇷', name:'Iran', code:'IR' },
+  { flag:'🇧🇷', name:'Brazil', code:'BR' },
+  { flag:'🇮🇳', name:'India', code:'IN' },
+  { flag:'🇬🇧', name:'United Kingdom', code:'GB' },
+];
+
+const MALWARE_NAMES = ['BlackMamba','NightCrawler','RedPhoenix','VoidEater','ShadowNet',
+  'CryptoLock','GhostRAT','ZeusBot','Mirai.v9','DarkPulse','IceFire','LockBit','Cobalt','Emotet','Ryuk'];
+
+const TARGETS = ['Banking Infrastructure','Healthcare DB','Government Portal','Energy Grid',
+  'Telecom Network','Financial API','Cloud Storage','Military Network','Stock Exchange',
+  'Airport Systems','Water Treatment','Supply Chain Hub','Media Network','Research Lab'];
+
+const CVE_POOL = ['CVE-2024-1234','CVE-2024-3456','CVE-2023-9876','CVE-2024-7890',
+  'CVE-2023-5432','CVE-2024-2468','CVE-2023-1357','CVE-2024-9012'];
+
+const RISK_LEVELS = ['low','medium','high','critical'];
+const RISK_WEIGHTS = [0.35, 0.30, 0.22, 0.13];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+
+let allThreats = [];
+let currentFilter = 'all';
+let stats = { low: 0, medium: 0, high: 0, critical: 0 };
+let geoCounts = {};
+let attackTypeCounts = {};
+let timelineData = new Array(24).fill(0);
+let vectorData = {};
+let mapDots = [];
+let sparkData = { low:[], medium:[], high:[], critical:[] };
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+GEO_DATA.forEach(g => geoCounts[g.code] = Math.floor(Math.random() * 80 + 10));
+ATTACK_TYPES_LIST.slice(0, 8).forEach(t => {
+  attackTypeCounts[t] = Math.floor(Math.random() * 200 + 20);
+});
+
+for (let i = 0; i < 24; i++) timelineData[i] = Math.floor(Math.random() * 60 + 10);
+
+const vectorNames = ['Network','Web App','Email','Endpoint','Cloud','Supply Chain'];
+vectorNames.forEach(v => { vectorData[v] = Math.floor(Math.random() * 100 + 10); });
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s} UTC`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── THREAT GENERATION ───────────────────────────────────────────────────────
+
+function pickWeighted() {
+  const r = Math.random();
+  let cum = 0;
+  for (let i = 0; i < RISK_LEVELS.length; i++) {
+    cum += RISK_WEIGHTS[i];
+    if (r < cum) return RISK_LEVELS[i];
+  }
+  return 'low';
+}
+
+function randIP() {
+  return `${Math.floor(Math.random()*220+10)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+}
+
+function now() {
+  const d = new Date();
+  return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`;
+}
+
+function generateThreat() {
+  const risk = pickWeighted();
+  const geoEntry = GEO_DATA[Math.floor(Math.random() * GEO_DATA.length)];
+  const attackType = ATTACK_TYPES_LIST[Math.floor(Math.random() * ATTACK_TYPES_LIST.length)];
+  const target = TARGETS[Math.floor(Math.random() * TARGETS.length)];
+  const malware = MALWARE_NAMES[Math.floor(Math.random() * MALWARE_NAMES.length)];
+  const cve = Math.random() > 0.5 ? CVE_POOL[Math.floor(Math.random() * CVE_POOL.length)] : null;
+  const srcIP = randIP();
+  const dstIP = randIP();
+  const port = [22,80,443,8080,3306,5432,445,1433,6379,27017][Math.floor(Math.random()*10)];
+
+  return {
+    id: Date.now() + Math.random(),
+    risk,
+    type: attackType,
+    target,
+    malware,
+    cve,
+    srcIP,
+    dstIP,
+    port,
+    geo: geoEntry,
+    time: now(),
+    title: `${attackType} → ${target}`,
+    meta: `${srcIP} [${geoEntry.code}] → ${dstIP}:${port}${cve ? ' · ' + cve : ''}`
+  };
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+
+function updateStats(risk) {
+  stats[risk]++;
+  const map = { low:'stat-low', medium:'stat-med', high:'stat-high', critical:'stat-crit' };
+  const el = document.getElementById(map[risk]);
+  if (el) {
+    el.textContent = stats[risk];
+    el.style.transform = 'scale(1.15)';
+    setTimeout(() => el.style.transform = 'scale(1)', 200);
+  }
+  const deltaMap = { low:'delta-low', medium:'delta-med', high:'delta-high', critical:'delta-crit' };
+  const d = document.getElementById(deltaMap[risk]);
+  if (d) d.textContent = `+${stats[risk]} events today`;
+
+  // sparkline
+  sparkData[risk].push(stats[risk]);
+  if (sparkData[risk].length > 16) sparkData[risk].shift();
+  const sparkMap = { low:'spark-low', medium:'spark-med', high:'spark-high', critical:'spark-crit' };
+  renderSparkline(sparkMap[risk], sparkData[risk]);
+}
+
+function renderSparkline(id, data) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const max = Math.max(...data, 1);
+  el.innerHTML = data.map(v => {
+    const pct = Math.max(5, Math.round((v / max) * 100));
+    return `<div class="spark-bar" style="height:${pct}%"></div>`;
+  }).join('');
+}
+
+// ─── FEED ─────────────────────────────────────────────────────────────────────
+
+function renderFeed() {
+  const feed = document.getElementById('threatFeed');
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allThreats.filter(t => {
+    const matchFilter = currentFilter === 'all' || t.risk === currentFilter;
+    const matchSearch = !query ||
+      t.title.toLowerCase().includes(query) ||
+      t.meta.toLowerCase().includes(query) ||
+      t.type.toLowerCase().includes(query) ||
+      t.risk.includes(query);
+    return matchFilter && matchSearch;
+  });
+
+  feed.innerHTML = filtered.slice(0, 40).map(t => `
+    <div class="threat-item risk-${t.risk}" onclick="showDetail(${t.id})">
+      <div class="threat-badge">${t.risk.toUpperCase()}</div>
+      <div class="threat-info">
+        <div class="threat-title">${t.title}</div>
+        <div class="threat-meta">${t.meta}</div>
+      </div>
+      <div class="threat-time">${t.time}</div>
+    </div>
+  `).join('');
+}
+
+function filterFeed() { renderFeed(); }
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFeed();
+}
+
+function clearFeed() {
+  allThreats = [];
+  renderFeed();
+}
+
+// ─── GEO LIST ─────────────────────────────────────────────────────────────────
+
+function renderGeoList() {
+  const counts = Object.entries(geoCounts).sort((a, b) => b[1] - a[1]);
+  const max = counts[0][1];
+  const el = document.getElementById('geoList');
+  el.innerHTML = GEO_DATA
+    .sort((a, b) => (geoCounts[b.code] || 0) - (geoCounts[a.code] || 0))
+    .slice(0, 6)
+    .map(g => {
+      const count = geoCounts[g.code] || 0;
+      const pct = Math.round((count / max) * 100);
+      return `
+        <div class="geo-item">
+          <span class="geo-flag">${g.flag}</span>
+          <span class="geo-name">${g.name}</span>
+          <div class="geo-bar-wrap"><div class="geo-bar" style="width:${pct}%"></div></div>
+          <span class="geo-count">${count}</span>
+        </div>
+      `;
+    }).join('');
+}
+
+// ─── ATTACK TYPES ─────────────────────────────────────────────────────────────
+
+const typeColors = ['#00d4ff','#ff2244','#ffcc00','#00ff88','#ff8800','#aa66ff','#ff66aa','#44ddff'];
+
+function renderAttackTypes() {
+  const sorted = Object.entries(attackTypeCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = sorted[0][1];
+  const el = document.getElementById('attackTypes');
+  el.innerHTML = sorted.map(([name, count], i) => {
+    const pct = Math.round((count / max) * 100);
+    return `
+      <div class="attack-type-row">
+        <div class="attack-type-label">${name}</div>
+        <div class="attack-bar-wrap"><div class="attack-bar" style="width:${pct}%;background:${typeColors[i%typeColors.length]}"></div></div>
+        <div class="attack-count">${count}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── WORLD MAP ────────────────────────────────────────────────────────────────
+
+const MAP_LOCATIONS = [
+  // [lat, lon] key city locations
+  [55.75,37.62],[39.91,116.39],[51.5,-0.12],[40.71,-74.0],[48.85,2.35],
+  [35.68,139.69],[28.61,77.21],[1.35,103.81],[37.38,127.0],[55.68,12.57],
+  [41.0,28.95],[59.91,10.75],[52.37,4.89],[50.08,14.43],[25.2,55.27],
+  [-23.5,-46.63],[19.43,-99.13],[34.05,-118.24],[33.86,151.2],[30.04,31.24],
+  [45.42,-75.69],[-33.86,151.2],[14.69,-17.44],[6.37,2.38],[47.1,28.87],
+  [10.31,-66.0],[-34.6,-58.38],[4.35,18.56],[3.86,11.52],[15.55,32.53],
+];
+
+function latLonToXY(lat, lon, w, h) {
+  const x = ((lon + 180) / 360) * w;
+  const y = ((90 - lat) / 180) * h;
+  return [x, y];
+}
+
+function initMap() {
+  const canvas = document.getElementById('mapCanvas');
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth;
+  canvas.height = 320;
+  drawMap();
+}
+
+function drawMap() {
+  const canvas = document.getElementById('mapCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W/2);
+  bg.addColorStop(0, '#0a1e35');
+  bg.addColorStop(1, '#030c18');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0,80,130,0.25)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 12; i++) {
+    const x = (i / 12) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let i = 0; i <= 6; i++) {
+    const y = (i / 6) * H;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Equator & Prime Meridian
+  ctx.strokeStyle = 'rgba(0,120,180,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+
+  // Simplified world outline blobs
+  const landBlobs = [
+    // North America
+    { x: 0.13, y: 0.20, rx: 0.07, ry: 0.18 },
+    // South America
+    { x: 0.23, y: 0.55, rx: 0.05, ry: 0.15 },
+    // Europe
+    { x: 0.48, y: 0.22, rx: 0.04, ry: 0.08 },
+    // Africa
+    { x: 0.49, y: 0.48, rx: 0.06, ry: 0.15 },
+    // Asia (large)
+    { x: 0.64, y: 0.28, rx: 0.14, ry: 0.16 },
+    // Southeast Asia
+    { x: 0.72, y: 0.50, rx: 0.05, ry: 0.07 },
+    // Australia
+    { x: 0.78, y: 0.65, rx: 0.06, ry: 0.06 },
+    // Greenland
+    { x: 0.24, y: 0.10, rx: 0.03, ry: 0.07 },
+  ];
+
+  landBlobs.forEach(b => {
+    ctx.beginPath();
+    ctx.ellipse(b.x * W, b.y * H, b.rx * W, b.ry * H, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10,50,80,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,120,180,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  });
+
+  // Key city dots
+  MAP_LOCATIONS.forEach(([lat, lon]) => {
+    const [x, y] = latLonToXY(lat, lon, W, H);
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,150,200,0.5)';
+    ctx.fill();
+  });
+
+  // Map dots (attack arcs)
+  const now = Date.now();
+  mapDots = mapDots.filter(d => now - d.created < 6000);
+  mapDots.forEach(d => {
+    const age = (now - d.created) / 6000;
+    const alpha = 1 - age;
+    const [sx, sy] = latLonToXY(d.srcLat, d.srcLon, W, H);
+    const [dx, dy] = latLonToXY(d.dstLat, d.dstLon, W, H);
+    const mx = (sx + dx) / 2;
+    const my = Math.min(sy, dy) - 30;
+
+    // Arc
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(mx, my, dx, dy);
+    ctx.strokeStyle = d.color.replace('1)', `${alpha * 0.7})`);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Animated progress dot along arc
+    const t = Math.min(age * 1.5, 1);
+    const ax = (1-t)*(1-t)*sx + 2*(1-t)*t*mx + t*t*dx;
+    const ay = (1-t)*(1-t)*sy + 2*(1-t)*t*my + t*t*dy;
+    ctx.beginPath();
+    ctx.arc(ax, ay, 3, 0, Math.PI * 2);
+    ctx.fillStyle = d.color.replace('1)', `${alpha})`);
+    ctx.fill();
+
+    // Source pulse
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2 + age * 6, 0, Math.PI * 2);
+    ctx.strokeStyle = d.color.replace('1)', `${alpha * 0.3})`);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Destination dot
+    ctx.beginPath();
+    ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = d.color.replace('1)', `${alpha})`);
+    ctx.fill();
+  });
+
+  requestAnimationFrame(drawMap);
+}
+
+function addMapDot(risk) {
+  const src = MAP_LOCATIONS[Math.floor(Math.random() * MAP_LOCATIONS.length)];
+  const dst = MAP_LOCATIONS[Math.floor(Math.random() * MAP_LOCATIONS.length)];
+  const colorMap = {
+    low: 'rgba(0,255,136,1)',
+    medium: 'rgba(255,204,0,1)',
+    high: 'rgba(255,136,0,1)',
+    critical: 'rgba(255,34,68,1)'
+  };
+  mapDots.push({
+    srcLat: src[0], srcLon: src[1],
+    dstLat: dst[0], dstLon: dst[1],
+    color: colorMap[risk] || 'rgba(0,212,255,1)',
+    created: Date.now()
+  });
+}
+
+function clearMapDots() { mapDots = []; }
+
+// ─── TIMELINE CHART ───────────────────────────────────────────────────────────
+
+function drawTimeline() {
+  const canvas = document.getElementById('timelineChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth; canvas.width = W;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const max = Math.max(...timelineData, 1);
+  const pad = { l: 30, r: 10, t: 10, b: 25 };
+  const cW = W - pad.l - pad.r;
+  const cH = H - pad.t - pad.b;
+  const barW = (cW / 24) * 0.7;
+  const gap = (cW / 24) * 0.3;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,60,100,0.5)';
+  ctx.lineWidth = 0.5;
+  [0.25, 0.5, 0.75, 1].forEach(f => {
+    const y = pad.t + cH * (1 - f);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(90,138,170,0.5)';
+    ctx.font = '9px Share Tech Mono';
+    ctx.fillText(Math.round(max * f), 2, y + 3);
+  });
+
+  // Bars
+  timelineData.forEach((v, i) => {
+    const x = pad.l + i * (barW + gap);
+    const bh = (v / max) * cH;
+    const y = pad.t + cH - bh;
+    const hour = i;
+    const isRecent = hour >= 20;
+    const grad = ctx.createLinearGradient(0, y, 0, pad.t + cH);
+    grad.addColorStop(0, isRecent ? 'rgba(0,212,255,0.9)' : 'rgba(0,150,200,0.6)');
+    grad.addColorStop(1, isRecent ? 'rgba(0,80,150,0.3)' : 'rgba(0,40,80,0.2)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, barW, bh);
+
+    if (i % 4 === 0) {
+      ctx.fillStyle = 'rgba(90,138,170,0.6)';
+      ctx.font = '8px Share Tech Mono';
+      ctx.fillText(`${String(i).padStart(2,'0')}h`, x, H - 8);
+    }
+  });
+
+  // Line overlay
+  ctx.beginPath();
+  timelineData.forEach((v, i) => {
+    const x = pad.l + i * (barW + gap) + barW / 2;
+    const y = pad.t + cH - (v / max) * cH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = 'rgba(0,212,255,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// ─── VECTOR CHART (donut-like) ─────────────────────────────────────────────────
+
+function drawVectorChart() {
+  const canvas = document.getElementById('vectorChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth; canvas.width = W;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const total = Object.values(vectorData).reduce((a, b) => a + b, 0);
+  const entries = Object.entries(vectorData);
+  const colors = ['#00d4ff','#ff2244','#ffcc00','#00ff88','#ff8800','#aa66ff'];
+  const cx = W * 0.35, cy = H / 2, R = Math.min(cx, cy) * 0.75;
+  const inner = R * 0.55;
+
+  let startAngle = -Math.PI / 2;
+  entries.forEach(([name, val], i) => {
+    const angle = (val / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, startAngle, startAngle + angle);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.globalAlpha = 0.8;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#030508';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    startAngle += angle;
+  });
+
+  // Inner hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a1520';
+  ctx.fill();
+
+  // Center text
+  ctx.fillStyle = '#c8e8ff';
+  ctx.font = `bold 18px Share Tech Mono`;
+  ctx.textAlign = 'center';
+  ctx.fillText(total, cx, cy + 6);
+  ctx.fillStyle = '#2a5a7a';
+  ctx.font = '8px Share Tech Mono';
+  ctx.fillText('TOTAL', cx, cy + 18);
+  ctx.textAlign = 'left';
+
+  // Legend
+  const lx = cx + R + 14;
+  entries.forEach(([name, val], i) => {
+    const y = 18 + i * 22;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(lx, y - 7, 10, 10);
+    ctx.fillStyle = '#5a8aaa';
+    ctx.font = '9px Share Tech Mono';
+    ctx.fillText(name, lx + 14, y + 2);
+    ctx.fillStyle = '#c8e8ff';
+    ctx.font = 'bold 9px Share Tech Mono';
+    ctx.fillText(val, lx + 14, y + 13);
+  });
+}
+
+// ─── RADAR CHART ─────────────────────────────────────────────────────────────
+
+function drawRadarChart() {
+  const canvas = document.getElementById('radarChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const categories = ['Network','Malware','Phishing','Insider','Physical','Cloud'];
+  const values = categories.map(() => Math.random() * 0.7 + 0.15);
+  const n = categories.length;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.38;
+
+  // Rings
+  [0.25,0.5,0.75,1].forEach(f => {
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + Math.cos(angle) * R * f;
+      const y = cy + Math.sin(angle) * R * f;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,80,130,0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  });
+
+  // Axes
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R);
+    ctx.strokeStyle = 'rgba(0,80,130,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(angle) * R * v;
+    const y = cy + Math.sin(angle) * R * v;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,212,255,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,212,255,0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Points
+  values.forEach((v, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(angle) * R * v;
+    const y = cy + Math.sin(angle) * R * v;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff';
+    ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle = '#5a8aaa';
+  ctx.font = '9px Share Tech Mono';
+  ctx.textAlign = 'center';
+  categories.forEach((cat, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(angle) * (R + 18);
+    const y = cy + Math.sin(angle) * (R + 18);
+    ctx.fillText(cat, x, y + 3);
+  });
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+
+function showDetail(id) {
+  const t = allThreats.find(x => x.id === id);
+  if (!t) return;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = `
+    <div class="modal-field"><span class="modal-key">RISK LEVEL</span><span class="modal-val" style="color:${t.risk==='critical'?'var(--red)':t.risk==='high'?'var(--orange)':t.risk==='medium'?'var(--yellow)':'var(--green)'}">${t.risk.toUpperCase()}</span></div>
+    <div class="modal-field"><span class="modal-key">ATTACK TYPE</span><span class="modal-val">${t.type}</span></div>
+    <div class="modal-field"><span class="modal-key">TARGET</span><span class="modal-val">${t.target}</span></div>
+    <div class="modal-field"><span class="modal-key">MALWARE</span><span class="modal-val">${t.malware}</span></div>
+    <div class="modal-field"><span class="modal-key">SOURCE IP</span><span class="modal-val">${t.srcIP}</span></div>
+    <div class="modal-field"><span class="modal-key">DEST IP</span><span class="modal-val">${t.dstIP}:${t.port}</span></div>
+    <div class="modal-field"><span class="modal-key">ORIGIN</span><span class="modal-val">${t.geo.flag} ${t.geo.name}</span></div>
+    ${t.cve ? `<div class="modal-field"><span class="modal-key">CVE REF</span><span class="modal-val" style="color:var(--accent-cyan)">${t.cve}</span></div>` : ''}
+    <div class="modal-field"><span class="modal-key">TIMESTAMP</span><span class="modal-val">${t.time} UTC</span></div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+function closeModalDirect() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────────────────────────────
+
+function tick() {
+  const t = generateThreat();
+  allThreats.unshift(t);
+  if (allThreats.length > 200) allThreats.pop();
+
+  updateStats(t.risk);
+  addMapDot(t.risk);
+
+  geoCounts[t.geo.code] = (geoCounts[t.geo.code] || 0) + 1;
+  attackTypeCounts[t.type] = (attackTypeCounts[t.type] || 0) + 1;
+
+  // Update current hour in timeline
+  const h = new Date().getUTCHours();
+  timelineData[h]++;
+
+  // Update vector counts
+  const vMap = {
+    'DDoS':'Network','Port Scan':'Network','SQL Injection':'Web App',
+    'XSS':'Web App','Phishing':'Email','Ransomware':'Endpoint',
+    'Malware Drop':'Endpoint','Botnet C2':'Network',
+    'Supply Chain':'Supply Chain','Zero-Day':'Endpoint',
+    'Brute Force':'Web App','MITM':'Network',
+    'Credential Stuffing':'Web App','DNS Poisoning':'Network',
+    'Lateral Movement':'Cloud'
+  };
+  const v = vMap[t.type] || 'Network';
+  if (vectorData[v] !== undefined) vectorData[v]++;
+
+  renderFeed();
+  renderGeoList();
+  renderAttackTypes();
+  drawTimeline();
+  drawVectorChart();
+}
+
+function slowTick() {
+  drawRadarChart();
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('load', () => {
+  initMap();
+
+  // Pre-populate some events
+  for (let i = 0; i < 15; i++) {
+    const t = generateThreat();
+    allThreats.push(t);
+    stats[t.risk]++;
+    geoCounts[t.geo.code] = (geoCounts[t.geo.code] || 0) + 1;
+    attackTypeCounts[t.type] = (attackTypeCounts[t.type] || 0) + 1;
+  }
+
+  // Init stat display
+  ['low','medium','high','critical'].forEach(r => {
+    const map = { low:'stat-low', medium:'stat-med', high:'stat-high', critical:'stat-crit' };
+    const d = { low:'delta-low', medium:'delta-med', high:'delta-high', critical:'delta-crit' };
+    const el = document.getElementById(map[r]);
+    const dl = document.getElementById(d[r]);
+    if (el) el.textContent = stats[r];
+    if (dl) dl.textContent = `+${stats[r]} events today`;
+  });
+
+  renderFeed();
+  renderGeoList();
+  renderAttackTypes();
+  drawTimeline();
+  drawVectorChart();
+  drawRadarChart();
+
+  // Live feed interval
+  setInterval(tick, 1800 + Math.random() * 1200);
+  setInterval(() => {
+    // Randomize interval for realism
+    setTimeout(tick, Math.random() * 800);
+  }, 3000);
+
+  setInterval(slowTick, 8000);
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    initMap();
+    drawTimeline();
+    drawVectorChart();
+  });
+});
+</script>
+</body>
+</html>
